@@ -2,7 +2,7 @@
 *A High-Performance TCP SYN scanner*
 
 ## What is Armada?
-Armada is a high performance TCP SYN scanner. This is equivalent to the type of scanning that nmap might perform when you use the `-sS` scan type. Armada's main goal is to answer the basic question "Is this port open?". It is then up to you, or your tooling, to dig further to identify what an open port for. 
+Armada is a high performance TCP SYN scanner. This is equivalent to the type of scanning that nmap might perform when you use the `-sS` scan type. Armada's main goal is to answer the basic question "Is this port open?". It is then up to you, or your tooling, to dig further to identify what an open port is for. 
 
 ## How do I install Armada?
 If you don't have `rustup` installed, visit the [rustup](https://rustup.rs) website and follow the instructions there to get started.
