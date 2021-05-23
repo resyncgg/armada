@@ -1,0 +1,16 @@
+# Formatting rules: https://rust-lang.github.io/rustfmt/?version=v1.4.36
+
+unstable_features = true
+
+combine_control_expr = false
+condense_wildcard_suffixes = true
+edition = "2018"
+fn_single_line = true
+imports_layout = "Vertical"
+imports_granularity = "Module"
+reorder_impl_items = true
+group_imports = "StdExternalCrate"
+spaces_around_ranges = true
+use_field_init_shorthand = true
+use_try_shorthand = true
+max_width = 120

@@ -1,0 +1,24 @@
+[package]
+name = "armada"
+version = "0.1.0"
+authors = ["d0nut <nathanial.lattimer@gmail.com>"]
+edition = "2018"
+license = "CC-BY-NC-SA-4.0"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[profile.release]
+debug = false
+
+
+[dependencies]
+async-trait = "0.1"
+armada_lib = { path = "../armada_lib" }
+cidr-utils = "0.5"
+clap = { version = "2.33", features = ["yaml"] }
+console = "0.14"
+indicatif = "0.15"
+rand = "0.8.3"
+regex = "1.4"
+lazy_static = "1.4"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"]}
