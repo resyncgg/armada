@@ -1,9 +1,10 @@
 [package]
 name = "armada_lib"
 version = "0.1.0"
-authors = ["d0nut <nathanial.lattimer@gmail.com>"]
-description = "Reserved for future use."
+authors = ["d0nut <d0nut@resync.gg>"]
+description = "A high performance TCP SYN port scanner library."
 license = "CC-BY-NC-SA-4.0"
+repository = "https://github.com/resyncgg/armada"
 edition = "2018"
 
 [lib]
