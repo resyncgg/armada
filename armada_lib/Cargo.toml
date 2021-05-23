@@ -1,6 +1,6 @@
 [package]
 name = "armada_lib"
-version = "1.0.0"
+version = "1.0.1"
 authors = ["d0nut <d0nut@resync.gg>"]
 description = "A high performance TCP SYN port scanner library."
 license = "CC-BY-NC-SA-4.0"
@@ -20,8 +20,9 @@ itertools = "0.10"
 lazy_static = "1.4"
 libc = "0.2"
 num-traits = "0.2"
-pnet = "0.27"
-pnet_sys = "0.27"
+pnet = "0.28"
+pnet_sys = "0.28"
+pnet_packet = "0.28"
 regex = "1.4"
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "sync", "process"]}
 tokio-stream = "0.1"
