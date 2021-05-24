@@ -14,6 +14,7 @@ debug = false
 
 
 [dependencies]
+atty = "0.2"
 async-trait = "0.1"
 armada_lib = "1.0.0"
 cidr-utils = "0.5"

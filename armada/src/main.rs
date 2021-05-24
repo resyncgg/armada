@@ -35,6 +35,7 @@ async fn main() {
         retries,
         timeout,
         source_ips,
+        stream_results,
     } = args::get_armada_cli_config();
 
     let armada = Armada::new(listening_port);
@@ -45,21 +46,23 @@ async fn main() {
         use run_variants::QuietArmada;
 
         armada
-            .run_quiet(targets, ports, source_ipv4, source_ipv6, retries, timeout, rate_limit)
+            .run_quiet(targets, ports, source_ipv4, source_ipv6, retries, timeout, rate_limit, stream_results)
             .await
     } else {
         use run_variants::ProgressArmada;
 
         armada
-            .run_with_stats(targets, ports, source_ipv4, source_ipv6, retries, timeout, rate_limit)
+            .run_with_stats(targets, ports, source_ipv4, source_ipv6, retries, timeout, rate_limit, stream_results)
             .await
     };
 
-    syn_scan_results.sort();
+    if !stream_results {
+        syn_scan_results.sort();
 
-    syn_scan_results.into_iter().for_each(|remote| {
-        println!("{}:{}", remote.ip(), remote.port());
-    });
+        syn_scan_results.into_iter().for_each(|remote| {
+            println!("{}:{}", remote.ip(), remote.port());
+        });
+    }
 }
 
 async fn split_and_enforce_source_ips(source_ips: Option<Vec<IpAddr>>) -> (Vec<Ipv4Addr>, Vec<Ipv6Addr>) {

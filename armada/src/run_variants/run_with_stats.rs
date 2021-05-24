@@ -31,6 +31,7 @@ impl ProgressArmada for Armada {
         retries: u8,
         timeout: Duration,
         rate_limit: Option<usize>,
+        stream_output: bool
     ) -> Vec<SocketAddr> {
         let mut total_open_ports = Vec::new();
         let total_ports: u128 = targets.size() * ports.size() as u128;
@@ -72,7 +73,14 @@ impl ProgressArmada for Armada {
         while let Some(message) = reporting_handle.recv().await {
             match message {
                 ArmadaWorkMessage::Results(results) => {
+                    if stream_output {
+                        results.iter().for_each(|remote| {
+                            println!("{}:{}", remote.ip(), remote.port());
+                        });
+                    }
+
                     total_open_ports.extend(results);
+
                     found_and_stats_progress_bar.set_message(&format!("{}", total_open_ports.len()));
                 }
                 ArmadaWorkMessage::Stats {

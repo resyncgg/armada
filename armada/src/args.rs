@@ -15,6 +15,7 @@ use clap::{
     Values,
 };
 use rand::Rng;
+use atty::Stream;
 
 const DEFAULT_RATE_LIMIT: usize = 10_000; // default rate limit
 const DEFAULT_PORT_RETRY: u8 = 2; // default number of additional attempts to make against ports
@@ -29,6 +30,7 @@ pub(crate) struct ArmadaCLIConfig {
     pub(crate) retries: u8,
     pub(crate) timeout: Duration,
     pub(crate) source_ips: Option<Vec<IpAddr>>,
+    pub(crate) stream_results: bool
 }
 
 pub(crate) fn get_armada_cli_config() -> ArmadaCLIConfig {
@@ -42,6 +44,13 @@ pub(crate) fn get_armada_cli_config() -> ArmadaCLIConfig {
     let retries = get_retries(&matches);
     let timeout = get_timeout(&matches);
     let source_ips = get_source_ip_addresses(&matches);
+    let stream_results = get_stream_results(&matches);
+
+    if stream_results {
+        if !quiet_mode && atty::is(Stream::Stdout) {
+            panic!("Streaming only enabled when in quiet mode or when piping results out from armada.");
+        }
+    }
 
     ArmadaCLIConfig {
         targets,
@@ -52,6 +61,7 @@ pub(crate) fn get_armada_cli_config() -> ArmadaCLIConfig {
         retries,
         timeout,
         source_ips,
+        stream_results
     }
 }
 
@@ -181,6 +191,10 @@ fn get_source_ip_addresses(matches: &ArgMatches) -> Option<Vec<IpAddr>> {
     })
 }
 
+fn get_stream_results(matches: &ArgMatches) -> bool {
+    matches.is_present("stream")
+}
+
 fn app_config() -> App<'static, 'static> {
     App::new("armada")
         .author("d0nut <d0nut@resync.gg>")
@@ -241,4 +255,8 @@ fn app_config() -> App<'static, 'static> {
             .help("Scans for the top 1,000 most common ports.")
             .long("top1000")
             .takes_value(false))
+        .arg(Arg::with_name("stream")
+            .help("Enable streaming the results into stdout as they come in. Only works if piping the results out or if quiet mode is enabled.")
+            .long("stream")
+            .short("s"))
 }

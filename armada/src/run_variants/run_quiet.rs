@@ -5,11 +5,7 @@ use std::net::{
 };
 use std::time::Duration;
 
-use armada_lib::{
-    Armada,
-    HostIterator,
-    PortIterator,
-};
+use armada_lib::{Armada, HostIterator, PortIterator, ArmadaWorkMessage};
 use async_trait::async_trait;
 
 use crate::run_variants::QuietArmada;
@@ -25,16 +21,42 @@ impl QuietArmada for Armada {
         retries: u8,
         timeout: Duration,
         rate_limit: Option<usize>,
+        stream_results: bool
     ) -> Vec<SocketAddr> {
-        self.scan_collect(
-            targets,
-            ports,
-            source_ipv4_addrs,
-            source_ipv6_addrs,
-            retries,
-            timeout,
-            rate_limit,
-        )
-        .await
+        if stream_results {
+            let mut reporting_handle = self.scan_with_handle(
+                targets,
+                ports,
+                source_ipv4_addrs,
+                source_ipv6_addrs,
+                retries,
+                timeout,
+                rate_limit,
+            );
+
+            while let Some(message) = reporting_handle.recv().await {
+                match message {
+                    ArmadaWorkMessage::Results(results) => {
+                        results.iter().for_each(|remote| {
+                            println!("{}:{}", remote.ip(), remote.port());
+                        });
+                    }
+                    _ => {}
+                }
+            }
+
+            vec![]
+        } else {
+            self.scan_collect(
+                targets,
+                ports,
+                source_ipv4_addrs,
+                source_ipv6_addrs,
+                retries,
+                timeout,
+                rate_limit,
+            )
+                .await
+        }
     }
 }

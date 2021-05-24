@@ -25,6 +25,7 @@ pub(crate) trait QuietArmada {
         retries: u8,
         timeout: Duration,
         rate_limit: Option<usize>,
+        stream_results: bool
     ) -> Vec<SocketAddr>;
 }
 
@@ -39,5 +40,6 @@ pub(crate) trait ProgressArmada {
         retries: u8,
         timeout: Duration,
         rate_limit: Option<usize>,
+        stream_results: bool
     ) -> Vec<SocketAddr>;
 }
