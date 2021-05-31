@@ -279,7 +279,7 @@ impl ArmadaWorker {
         use crate::armada::packet::{create_syn_tcp_packet_v4, create_syn_tcp_packet_v6};
 
         let mut sent_addrs = Vec::with_capacity(BATCH_SEND_SIZE);
-        let mut syn_tcp_buffer = [0; 40];
+        let mut syn_tcp_buffer = [0; 32];
 
         for _ in 0 .. BATCH_SEND_SIZE {
             let remote = match requeued_addrs.pop() {
