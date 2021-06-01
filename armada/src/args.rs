@@ -135,13 +135,15 @@ fn get_ports(matches: &ArgMatches) -> PortIterator {
 fn get_quiet_mode(matches: &ArgMatches) -> bool { matches.is_present("quiet") }
 
 fn get_rate_limit(matches: &ArgMatches) -> Option<usize> {
-    let rate_limit = matches.value_of("rate_limit").map(|value| {
-        value
-            .parse::<usize>()
-            .expect("Rate limit must be a non-negative number.")
-    });
+    let rate_limit = matches.value_of("rate_limit")
+        .map(|value| {
+            value
+                .parse::<usize>()
+                .expect("Rate limit must be a non-negative number.")
+        });
 
     match rate_limit {
+        _ if matches.is_present("sanic") => None,
         Some(rate) if rate == 0 => None,
         Some(rate) => Some(rate),
         None => Some(DEFAULT_RATE_LIMIT),
@@ -167,6 +169,7 @@ fn get_retries(matches: &ArgMatches) -> u8 {
                 .parse::<u8>()
                 .expect(&format!("Unable to parse port retry value '{}'.", value))
         })
+        .or(matches.is_present("sanic").then(|| 0))
         .unwrap_or(DEFAULT_PORT_RETRY)
 }
 
@@ -259,4 +262,8 @@ fn app_config() -> App<'static, 'static> {
             .help("Enable streaming the results into stdout as they come in. Only works if piping the results out or if quiet mode is enabled.")
             .long("stream")
             .short("s"))
+        .arg(Arg::with_name("sanic")
+            .hidden(true)
+            .long("sanic")
+            .takes_value(false))
 }

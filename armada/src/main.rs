@@ -35,7 +35,7 @@ async fn main() {
         retries,
         timeout,
         source_ips,
-        stream_results,
+        stream_results
     } = args::get_armada_cli_config();
 
     let armada = Armada::new(listening_port);

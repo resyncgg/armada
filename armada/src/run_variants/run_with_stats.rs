@@ -53,9 +53,7 @@ impl ProgressArmada for Armada {
 
         let total_scan_progress_bar = multi_pb.add(ProgressBar::new(total_ports as u64));
         total_scan_progress_bar.set_message("0");
-        total_scan_progress_bar.set_style(ProgressStyle::default_bar().template(
-            "[ETA: {eta_precise:.dim}] {wide_bar:.red} {pos:.dim}/{len:.dim} ports (Elapsed: {elapsed_precise:.dim})",
-        ));
+        total_scan_progress_bar.set_style(ProgressStyle::default_bar().template(get_progress_stylization(&rate_limit, retries)));
         total_scan_progress_bar.enable_steady_tick(50);
 
         let mpb_thread_handle = std::thread::spawn(move || multi_pb.join_and_clear());
@@ -101,5 +99,12 @@ impl ProgressArmada for Armada {
         mpb_thread_handle.join();
 
         total_open_ports
+    }
+}
+
+fn get_progress_stylization(rate_limit: &Option<usize>, retries: u8) -> &'static str {
+    match (rate_limit, retries) {
+        (None, 0) => "[ETA: {eta_precise:.dim}] {wide_bar:.blue} {pos:.dim}/{len:.dim} ports (Elapsed: {elapsed_precise:.dim})",
+        _ => "[ETA: {eta_precise:.dim}] {wide_bar:.red} {pos:.dim}/{len:.dim} ports (Elapsed: {elapsed_precise:.dim})"
     }
 }
