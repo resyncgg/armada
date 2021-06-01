@@ -1,6 +1,6 @@
 [package]
 name = "armada"
-version = "1.0.1"
+version = "1.0.2"
 authors = ["d0nut <d0nut@resync.gg>"]
 edition = "2018"
 description = "A high performance TCP SYN port scanner."
