@@ -59,6 +59,7 @@ fn create_syn_tcp_packet_inner<'b>(
     tcp_seq: &mut u32,
 ) -> Option<MutableTcpPacket<'b>> {
     use pnet::packet::tcp::TcpFlags::SYN;
+    use pnet::packet::tcp::TcpOption;
 
     // inc 2?
     *tcp_seq += 1;
@@ -68,10 +69,11 @@ fn create_syn_tcp_packet_inner<'b>(
     tcp_packet.set_source(source_port);
     tcp_packet.set_destination(remote_port);
     tcp_packet.set_sequence(*tcp_seq);
-    tcp_packet.set_acknowledgement(*tcp_seq + 1);
-    tcp_packet.set_window(32 * 1024);
+    tcp_packet.set_acknowledgement(0);
+    tcp_packet.set_window(1024);
     tcp_packet.set_data_offset(8);
     tcp_packet.set_flags(SYN);
+    tcp_packet.set_options(&[TcpOption::mss(1460)]);
 
     Some(tcp_packet)
 }
