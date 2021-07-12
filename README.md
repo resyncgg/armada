@@ -7,7 +7,7 @@ Armada is a high performance TCP SYN scanner. This is equivalent to the type of 
 ## How do I install Armada?
 If you don't have `rustup` installed, visit the [rustup](https://rustup.rs) website and follow the instructions there to get started.
 
-**IMPORTANT**: *YOU MUST INSTALL RUST VIA RUSTUP*
+**IMPORTANT**: *YOU MUST INSTALL `cargo` VIA RUSTUP*
 
 After you have `cargo` installed, run `cargo install armada`.
 
