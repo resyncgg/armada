@@ -1,5 +1,5 @@
 use std::fs::read_to_string;
-use std::io::stdin;
+use std::io::{BufRead, stdin};
 use std::net::IpAddr;
 use std::str::FromStr;
 use std::time::Duration;
@@ -77,6 +77,7 @@ fn get_targets(matches: &ArgMatches) -> HostIterator {
     } else {
         // we'll assume that the user is passing newline delimited targets via stdin
         stdin()
+            .lock()
             .lines()
             .filter_map(Result::ok)
             .collect()
