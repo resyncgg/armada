@@ -1,3 +1,5 @@
+use std::fs::read_to_string;
+use std::io::stdin;
 use std::net::IpAddr;
 use std::str::FromStr;
 use std::time::Duration;
@@ -7,13 +9,7 @@ use armada_lib::{
     PortIterator,
 };
 use cidr_utils::cidr::IpCidr;
-use clap::{
-    crate_version,
-    App,
-    Arg,
-    ArgMatches,
-    Values,
-};
+use clap::{crate_version, Arg, ArgMatches, ArgGroup, Command};
 use rand::Rng;
 use atty::Stream;
 
@@ -66,15 +62,34 @@ pub(crate) fn get_armada_cli_config() -> ArmadaCLIConfig {
 }
 
 fn get_targets(matches: &ArgMatches) -> HostIterator {
-    matches
-        .values_of("targets")
-        .expect("Targets are required for armada to run.")
+    let targets: Vec<String> = if let Some(targets_cli) = matches.values_of("targets") {
+        // use targets passed in via cli
+        targets_cli
+            .map(str::to_owned)
+            .collect()
+    } else if let Some(target_file) = matches.value_of("target_file") {
+        // read newline delimited targets from target file
+        read_to_string(target_file)
+            .expect("Unable to open target file")
+            .lines()
+            .map(str::to_owned)
+            .collect()
+    } else {
+        // we'll assume that the user is passing newline delimited targets via stdin
+        stdin()
+            .lines()
+            .filter_map(Result::ok)
+            .collect()
+    };
+
+    targets
+        .into_iter()
         .fold(HostIterator::new(), |host_iterator, target_str| {
-            if let Ok(ip_addr) = IpAddr::from_str(target_str) {
+            if let Ok(ip_addr) = IpAddr::from_str(&target_str) {
                 host_iterator.add_ip(ip_addr)
             } else {
                 // we'll force this to parse. If it fails, then an illegal value was placed into the target list and we should panic here.
-                let cidr = IpCidr::from_str(target_str).expect(&format!("Unable to parse target '{}'.", target_str));
+                let cidr = IpCidr::from_str(&target_str).expect(&format!("Unable to parse target '{}'.", target_str));
 
                 host_iterator.add_cidr(cidr)
             }
@@ -82,10 +97,7 @@ fn get_targets(matches: &ArgMatches) -> HostIterator {
 }
 
 fn get_ports(matches: &ArgMatches) -> PortIterator {
-    use regex::{
-        Match,
-        Regex,
-    };
+    use regex::Regex;
 
     use crate::ranges::{
         TOP_100,
@@ -198,72 +210,79 @@ fn get_stream_results(matches: &ArgMatches) -> bool {
     matches.is_present("stream")
 }
 
-fn app_config() -> App<'static, 'static> {
-    App::new("armada")
+fn app_config() -> Command<'static> {
+    Command::new("armada")
         .author("d0nut <d0nut@resync.gg>")
         .about("High performance TCP SYN port scanner")
         .version(crate_version!())
-        .arg(Arg::with_name("targets")
+        .arg(Arg::new("targets")
             .help("The IP and CIDR ranges to scan.")
-            .index(1)
-            .multiple(true)
+            .long("targets")
+            .short('t')
             .takes_value(true)
-            .require_delimiter(true)
-            .value_delimiter(",")
-            .required(true))
-        .arg(Arg::with_name("ports")
+            .multiple_values(true)
+            .require_value_delimiter(true)
+            .value_delimiter(','))
+        .arg(Arg::new("target_file")
+            .help("A newline delimited file containing IP addresses and CIDR ranges to scan.")
+            .long("target_file")
+            .takes_value(true))
+        .group(ArgGroup::new("scan_targets")
+            .args(&["targets", "target_file"])
+            .required(false))
+        .arg(Arg::new("ports")
             .help("Sets which ports to scan.")
-            .short("p")
+            .short('p')
             .long("ports")
-            .multiple(true)
+            .multiple_values(true)
             .takes_value(true)
-            .require_delimiter(true)
-            .value_delimiter(",")
+            .require_value_delimiter(true)
+            .value_delimiter(',')
             .conflicts_with_all(&["top100", "top1000"])
-            .required_unless_one(&["top100", "top1000"]))
-        .arg(Arg::with_name("quiet")
+            .required_unless_present_any(&["top100", "top1000"]))
+        .arg(Arg::new("quiet")
             .help("Disables any progress reporting during the scan.")
-            .short("q")
+            .short('q')
             .long("quiet")
             .takes_value(false))
-        .arg(Arg::with_name("rate_limit")
+        .arg(Arg::new("rate_limit")
             .help("Sets the maximum packets per second. \
             If this is explicitly set to 0, we'll run with no maximum. \
             Defaults to 10kpps. Keep in mind that faster != better.")
             .long("rate-limit")
             .takes_value(true))
-        .arg(Arg::with_name("listening_port")
+        .arg(Arg::new("listening_port")
             .help("Sets the port to listen on. If unset, armada will pick a random port from 50000-60000.")
             .long("listening-port")
             .takes_value(true))
-        .arg(Arg::with_name("retries")
+        .arg(Arg::new("retries")
             .help("Sets the number of additional attempts aramada will take to verify that a port is open. Setting this to '0' will result in ports only being checked once. Defaults to 2.")
             .long("retries")
             .takes_value(true))
-        .arg(Arg::with_name("timeout")
+        .arg(Arg::new("timeout")
             .help("Sets the amount of time, in milliseconds, waited until a sent packet is determined to have been timed out. Defaults to 1 second.")
             .long("timeout")
             .takes_value(true))
-        .arg(Arg::with_name("source_ips")
+        .arg(Arg::new("source_ip")
             .help("Adds an ip address (v4 or v6) that armada should use when creating TCP packets. If not set, it will try to use sensible defaults.")
             .long("source-ip")
-            .multiple(true)
+            .multiple_occurrences(true)
             .takes_value(true))
-        .arg(Arg::with_name("top100")
+        .arg(Arg::new("top100")
             .help("Scans for the top 100 most common ports.")
             .long("top100")
             .conflicts_with("top1000")
             .takes_value(false))
-        .arg(Arg::with_name("top1000")
+        .arg(Arg::new("top1000")
             .help("Scans for the top 1,000 most common ports.")
             .long("top1000")
             .takes_value(false))
-        .arg(Arg::with_name("stream")
+        .arg(Arg::new("stream")
             .help("Enable streaming the results into stdout as they come in. Only works if piping the results out or if quiet mode is enabled.")
             .long("stream")
-            .short("s"))
-        .arg(Arg::with_name("sanic")
-            .hidden(true)
+            .short('s'))
+        .arg(Arg::new("sanic")
+            .hide(true)
             .long("sanic")
             .takes_value(false))
 }
