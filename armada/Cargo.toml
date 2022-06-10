@@ -1,6 +1,6 @@
 [package]
 name = "armada"
-version = "1.0.2"
+version = "1.1.0"
 authors = ["d0nut <d0nut@resync.gg>"]
 edition = "2018"
 description = "A high performance TCP SYN port scanner."
@@ -14,14 +14,13 @@ debug = false
 
 
 [dependencies]
-atty = "0.2"
-async-trait = "0.1"
-armada_lib = "1.0" 
-cidr-utils = "0.5"
-clap = { version = "2.33", features = ["yaml"] }
-console = "0.14"
-indicatif = "0.15"
-rand = "0.8.3"
-regex = "1.4"
-lazy_static = "1.4"
+atty = "0"
+async-trait = "0"
+armada_lib = { version = "1", path = "../armada_lib" }
+cidr-utils = "0"
+clap = { version = "3", features = ["cargo"] }
+console = "0"
+indicatif = "0"
+rand = "0"
+regex = "1"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"]}

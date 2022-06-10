@@ -79,14 +79,14 @@ impl ProgressArmada for Armada {
 
                     total_open_ports.extend(results);
 
-                    found_and_stats_progress_bar.set_message(&format!("{}", total_open_ports.len()));
+                    found_and_stats_progress_bar.set_message(format!("{}", total_open_ports.len()));
                 }
                 ArmadaWorkMessage::Stats {
-                    total_processed_ports,
+                    total_processed_ports: _,
                     current_inflight_packets,
                     total_packets_sent,
                 } => {
-                    inflight_progress_bar.set_message(&format!("{}", current_inflight_packets));
+                    inflight_progress_bar.set_message(format!("{}", current_inflight_packets));
                     total_scan_progress_bar.set_position((total_packets_sent / (1 + retries) as u128) as u64);
                 }
             }
@@ -96,7 +96,9 @@ impl ProgressArmada for Armada {
         found_and_stats_progress_bar.finish_and_clear();
         inflight_progress_bar.finish_and_clear();
 
-        mpb_thread_handle.join();
+        if let Err(e) = mpb_thread_handle.join() {
+            eprintln!("An error occurred running the progress bar rendering thread: {:#?}", e);
+        }
 
         total_open_ports
     }

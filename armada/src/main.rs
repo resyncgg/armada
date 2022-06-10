@@ -7,22 +7,10 @@ use std::net::{
     Ipv4Addr,
     Ipv6Addr,
 };
-use std::str::FromStr;
-use std::time::Duration;
 
-use armada_lib::{
-    Armada,
-    HostIterator,
-    PortIterator,
-};
-use cidr_utils::cidr::IpCidr;
-use rand::Rng;
+use armada_lib::Armada;
 
 use crate::args::ArmadaCLIConfig;
-use crate::run_variants::{
-    ProgressArmada,
-    QuietArmada,
-};
 
 #[tokio::main]
 async fn main() {
