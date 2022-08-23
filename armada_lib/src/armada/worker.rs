@@ -1,17 +1,16 @@
 use crate::armada::tcp_ext::{TcpReceiverExt, TcpSenderExt};
 use crate::armada::work::{ArmadaWork, ArmadaWorkMessage};
-use pnet::packet::ip::{IpNextHeaderProtocol, IpNextHeaderProtocols};
+use pnet::packet::ip::IpNextHeaderProtocols;
 use pnet::transport::{
-    tcp_packet_iter, transport_channel, TcpTransportChannelIterator, TransportChannelType,
+    transport_channel, TransportChannelType,
     TransportProtocol, TransportReceiver, TransportSender,
 };
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{HashMap, HashSet};
 use std::hash::BuildHasherDefault;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
-use std::process::exit;
 use std::time::{Duration, Instant};
 use tokio::sync::mpsc::UnboundedReceiver;
-use tracing::{error, info, instrument, warn};
+use tracing::{error, warn};
 use twox_hash::XxHash64;
 
 const BATCH_SEND_SIZE: usize = 32;
@@ -152,11 +151,13 @@ impl ArmadaWorker {
                         .unwrap();
 
                     // might as well send a stats update
-                    reporting_channel.send(ArmadaWorkMessage::stats(
-                        total_processed_ports,
-                        inflight_addrs.len() as u128,
-                        total_packets_sent
-                    ));
+                    reporting_channel
+                        .send(ArmadaWorkMessage::stats(
+                            total_processed_ports,
+                            inflight_addrs.len() as u128,
+                            total_packets_sent
+                        ))
+                        .expect("Failed to send stats update over reporting channel.");
                 }
 
                 // if the number of packets we've sent so far is below the packet limit for our resolution, mark as "clear to send" otherwise don't
@@ -170,11 +171,13 @@ impl ArmadaWorker {
                         .unwrap();
 
                     // send our stats update
-                    reporting_channel.send(ArmadaWorkMessage::stats(
-                        total_processed_ports,
-                        inflight_addrs.len() as u128,
-                        total_packets_sent
-                    ));
+                    reporting_channel
+                        .send(ArmadaWorkMessage::stats(
+                            total_processed_ports,
+                            inflight_addrs.len() as u128,
+                            total_packets_sent
+                        ))
+                        .expect("Failed to send stats update over reporting channel.");
                 }
             }
 
@@ -230,11 +233,11 @@ impl ArmadaWorker {
                     total_processed_ports,
                     inflight_addrs.len() as u128,
                     total_packets_sent
-                ));
+                )).expect("Failed to send stats message to reporting channel.");
                 // we'll empty the open ports vec into our update here
                 reporting_channel.send(
                     ArmadaWorkMessage::results(open_ports.drain(.. open_ports.len()).collect())
-                );
+                ).expect("Failed to send results message to reporting channel.");
             }
 
             self.process_expiration(&mut expiry_list)
@@ -261,8 +264,13 @@ impl ArmadaWorker {
         }
 
         // send the final stats and results before closing up shop
-        reporting_channel.send(ArmadaWorkMessage::stats(total_processed_ports, inflight_addrs.len() as u128, total_packets_sent));
-        reporting_channel.send(ArmadaWorkMessage::results(open_ports));
+        reporting_channel
+            .send(ArmadaWorkMessage::stats(total_processed_ports, inflight_addrs.len() as u128, total_packets_sent))
+            .expect("Failed to send final stats message over reporting channel.");
+
+        reporting_channel
+            .send(ArmadaWorkMessage::results(open_ports))
+            .expect("Failed to send final results message over reporting channel.");
     }
 
     /// Pulls socket addresses off the queued address list and sends them SYN TCP packets via IPv4 or IPv6
@@ -354,8 +362,7 @@ impl ArmadaWorker {
         tcp_receiver: &mut TransportReceiver,
         listening_port: u16,
     ) -> Vec<SocketAddr> {
-        use crate::armada::tcp_ext::TcpReceiverExt;
-        use pnet::packet::tcp::TcpFlags::{ACK, RST, SYN};
+        use pnet::packet::tcp::TcpFlags::{ACK, RST};
 
         let mut results = Vec::with_capacity(BATCH_RECV_SIZE);
 

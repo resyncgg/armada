@@ -97,7 +97,6 @@ impl TcpReceiverExt for TransportReceiver {
 
                 0
             }
-            _ => 0,
         };
 
         // sometimes hosts will return odd packets...

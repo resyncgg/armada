@@ -20,6 +20,8 @@ use indicatif::{
 
 use crate::run_variants::ProgressArmada;
 
+const UPDATE_INTERVAL: Duration = Duration::from_millis(50);
+
 #[async_trait]
 impl ProgressArmada for Armada {
     async fn run_with_stats(
@@ -42,21 +44,20 @@ impl ProgressArmada for Armada {
         let found_and_stats_progress_bar = multi_pb.add(ProgressBar::new_spinner());
         found_and_stats_progress_bar.set_message("0");
         found_and_stats_progress_bar
-            .set_style(ProgressStyle::default_spinner().template("{spinner:.yellow} Found: {msg:.green}"));
-        found_and_stats_progress_bar.enable_steady_tick(50);
+            .set_style(ProgressStyle::default_spinner().template("{spinner:.yellow} Found: {msg:.green}").expect("invalid template"));
+        found_and_stats_progress_bar.enable_steady_tick(UPDATE_INTERVAL);
 
         let inflight_progress_bar = multi_pb.add(ProgressBar::new_spinner());
         inflight_progress_bar.set_message("0");
         inflight_progress_bar
-            .set_style(ProgressStyle::default_spinner().template("{spinner:.yellow} In-flight Packets: {msg:.blue}"));
-        inflight_progress_bar.enable_steady_tick(50);
+            .set_style(ProgressStyle::default_spinner().template("{spinner:.yellow} In-flight Packets: {msg:.blue}").expect("invalid template"));
+        inflight_progress_bar.enable_steady_tick(UPDATE_INTERVAL);
 
         let total_scan_progress_bar = multi_pb.add(ProgressBar::new(total_ports as u64));
         total_scan_progress_bar.set_message("0");
-        total_scan_progress_bar.set_style(ProgressStyle::default_bar().template(get_progress_stylization(&rate_limit, retries)));
-        total_scan_progress_bar.enable_steady_tick(50);
+        total_scan_progress_bar.set_style(ProgressStyle::default_bar().template(get_progress_stylization(&rate_limit, retries)).expect("invalid template"));
+        total_scan_progress_bar.enable_steady_tick(UPDATE_INTERVAL);
 
-        let mpb_thread_handle = std::thread::spawn(move || multi_pb.join_and_clear());
 
         let mut reporting_handle = self.scan_with_handle(
             targets,
@@ -95,10 +96,6 @@ impl ProgressArmada for Armada {
         total_scan_progress_bar.finish_and_clear();
         found_and_stats_progress_bar.finish_and_clear();
         inflight_progress_bar.finish_and_clear();
-
-        if let Err(e) = mpb_thread_handle.join() {
-            eprintln!("An error occurred running the progress bar rendering thread: {:#?}", e);
-        }
 
         total_open_ports
     }

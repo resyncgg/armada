@@ -14,10 +14,8 @@ use crate::armada::config::host::HostIterator;
 use crate::armada::config::port::PortIterator;
 use crate::armada::work::{ArmadaWork, ArmadaWorkMessage};
 use crate::armada::worker::ArmadaWorker;
-use cidr_utils::cidr::Ipv4Cidr;
 use futures::stream::StreamExt;
-use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
-use std::str::FromStr;
+use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr};
 use std::time::Duration;
 use tokio_stream::wrappers::UnboundedReceiverStream;
 
@@ -39,7 +37,7 @@ impl Armada {
             .name("armada_worker".to_string())
             .spawn(move || {
                 armada_worker.run(listening_port);
-            });
+            }).expect("Failed to create armada worker thread.");
 
         Self { work_sender }
     }
@@ -103,7 +101,7 @@ impl Armada {
             reporting_channel,
         );
 
-        self.work_sender.send(work);
+        self.work_sender.send(work).expect("Failed to send armada work over work sender channel.");
 
         report_receiver
     }

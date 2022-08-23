@@ -1,4 +1,4 @@
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct PortIterator {
     inner: Vec<PortRegion>,
     idx: Option<usize>,
@@ -35,13 +35,14 @@ impl PortIterator {
         self
     }
 
+    #[allow(dead_code)]
     fn reset(&mut self) {
         self.inner.iter_mut().for_each(|inner| inner.reset());
         self.idx = None;
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct PortRegion {
     start: u16,
     end: u16,
@@ -49,10 +50,10 @@ struct PortRegion {
 }
 
 impl PortRegion {
+    #[allow(dead_code)]
     fn reset(&mut self) {
-        if let PortRegion { idx, .. } = self {
-            *idx = None;
-        }
+        let PortRegion { idx, .. } = self;
+        let _ = idx.take();
     }
 
     fn size(&self) -> u16 {

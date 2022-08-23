@@ -4,6 +4,7 @@ use std::net::IpAddr;
 const IPV4_BITMASK: u8 = 32;
 const IPV6_BITMASK: u8 = 128;
 
+#[derive(Debug)]
 pub struct HostIterator {
     inner: Vec<IpCidr>,
     current_cidr_idx: Option<usize>,
@@ -75,7 +76,7 @@ impl HostIterator {
     fn rotate_iterator(&mut self) {
         match &mut self.current_cidr_idx {
             Some(idx) if *idx < self.inner.len() => *idx += 1,
-            Some(idx) => {}
+            Some(_) => {}
             None => self.current_cidr_idx = Some(0),
         }
 
