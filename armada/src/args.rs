@@ -200,7 +200,7 @@ fn get_timeout(matches: &ArgMatches) -> Duration {
 }
 
 fn get_source_ip_addresses(matches: &ArgMatches) -> Option<Vec<IpAddr>> {
-    matches.values_of("source_ips").map(|values| {
+    matches.values_of("source_ip").map(|values| {
         values
             .map(|value| IpAddr::from_str(value).expect(&format!("Unable to parse source IP address '{}'.", value)))
             .collect()
