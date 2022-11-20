@@ -1,23 +1,22 @@
 use std::fs::read_to_string;
-use std::io::{BufRead, stdin};
+use std::io::{stdin, BufRead};
 use std::net::IpAddr;
 use std::str::FromStr;
 use std::time::Duration;
 
-use armada_lib::{
-    HostIterator,
-    PortIterator,
-};
-use cidr_utils::cidr::IpCidr;
-use clap::{crate_version, Arg, ArgMatches, ArgGroup, Command};
-use rand::Rng;
+use armada_lib::{HostIterator, PortIterator};
 use atty::Stream;
+use cidr_utils::cidr::IpCidr;
+use clap::{crate_version, Arg, ArgGroup, ArgMatches, Command};
+use rand::Rng;
+
+use crate::config::get_toml_config;
 
 const DEFAULT_RATE_LIMIT: usize = 10_000; // default rate limit
 const DEFAULT_PORT_RETRY: u8 = 2; // default number of additional attempts to make against ports
 const DEFAULT_TIMEOUT_IN_MS: u64 = 1_000;
 
-pub(crate) struct ArmadaCLIConfig {
+pub(crate) struct ArmadaConfig {
     pub(crate) targets: HostIterator,
     pub(crate) ports: PortIterator,
     pub(crate) quiet_mode: bool,
@@ -26,11 +25,15 @@ pub(crate) struct ArmadaCLIConfig {
     pub(crate) retries: u8,
     pub(crate) timeout: Duration,
     pub(crate) source_ips: Option<Vec<IpAddr>>,
-    pub(crate) stream_results: bool
+    pub(crate) stream_results: bool,
 }
 
-pub(crate) fn get_armada_cli_config() -> ArmadaCLIConfig {
-    let matches = app_config().get_matches();
+pub(crate) fn get_armada_config() -> ArmadaConfig {
+    let mut matches = app_config().get_matches();
+    if matches.is_present("toml_config") {
+        let args = get_toml_config(matches.value_of("toml_config").unwrap().to_string());
+        matches = app_config().get_matches_from(args);
+    }
 
     let targets = get_targets(&matches);
     let ports = get_ports(&matches);
@@ -48,7 +51,7 @@ pub(crate) fn get_armada_cli_config() -> ArmadaCLIConfig {
         }
     }
 
-    ArmadaCLIConfig {
+    ArmadaConfig {
         targets,
         ports,
         quiet_mode,
@@ -57,16 +60,14 @@ pub(crate) fn get_armada_cli_config() -> ArmadaCLIConfig {
         retries,
         timeout,
         source_ips,
-        stream_results
+        stream_results,
     }
 }
 
 fn get_targets(matches: &ArgMatches) -> HostIterator {
     let targets: Vec<String> = if let Some(targets_cli) = matches.values_of("targets") {
         // use targets passed in via cli
-        targets_cli
-            .map(str::to_owned)
-            .collect()
+        targets_cli.map(str::to_owned).collect()
     } else if let Some(target_file) = matches.value_of("target_file") {
         // read newline delimited targets from target file
         read_to_string(target_file)
@@ -76,11 +77,7 @@ fn get_targets(matches: &ArgMatches) -> HostIterator {
             .collect()
     } else {
         // we'll assume that the user is passing newline delimited targets via stdin
-        stdin()
-            .lock()
-            .lines()
-            .filter_map(Result::ok)
-            .collect()
+        stdin().lock().lines().filter_map(Result::ok).collect()
     };
 
     targets
@@ -100,10 +97,7 @@ fn get_targets(matches: &ArgMatches) -> HostIterator {
 fn get_ports(matches: &ArgMatches) -> PortIterator {
     use regex::Regex;
 
-    use crate::ranges::{
-        TOP_100,
-        TOP_1000,
-    };
+    use crate::ranges::{TOP_100, TOP_1000};
 
     let user_port_string = matches.values_of("ports");
     let top_100_flag = matches.is_present("top100");
@@ -145,15 +139,16 @@ fn get_ports(matches: &ArgMatches) -> PortIterator {
         })
 }
 
-fn get_quiet_mode(matches: &ArgMatches) -> bool { matches.is_present("quiet") }
+fn get_quiet_mode(matches: &ArgMatches) -> bool {
+    matches.is_present("quiet")
+}
 
 fn get_rate_limit(matches: &ArgMatches) -> Option<usize> {
-    let rate_limit = matches.value_of("rate_limit")
-        .map(|value| {
-            value
-                .parse::<usize>()
-                .expect("Rate limit must be a non-negative number.")
-        });
+    let rate_limit = matches.value_of("rate_limit").map(|value| {
+        value
+            .parse::<usize>()
+            .expect("Rate limit must be a non-negative number.")
+    });
 
     match rate_limit {
         _ if matches.is_present("sanic") => None,
@@ -171,7 +166,7 @@ fn get_listening_port(matches: &ArgMatches) -> u16 {
                 .parse::<u16>()
                 .expect(&format!("Unable to parse listening port value '{}'.", value))
         })
-        .unwrap_or_else(|| rand::thread_rng().gen_range(50_000 .. 60_000))
+        .unwrap_or_else(|| rand::thread_rng().gen_range(50_000..60_000))
 }
 
 fn get_retries(matches: &ArgMatches) -> u8 {
@@ -240,7 +235,7 @@ fn app_config() -> Command<'static> {
             .require_value_delimiter(true)
             .value_delimiter(',')
             .conflicts_with_all(&["top100", "top1000"])
-            .required_unless_present_any(&["top100", "top1000"]))
+            .required_unless_present_any(&["top100", "top1000", "toml_config"]))
         .arg(Arg::new("quiet")
             .help("Disables any progress reporting during the scan.")
             .short('q')
@@ -278,6 +273,10 @@ fn app_config() -> Command<'static> {
             .help("Scans for the top 1,000 most common ports.")
             .long("top1000")
             .takes_value(false))
+        .arg(Arg::new("toml_config")
+            .help("Read configuration from TOML file instead of command line args.")
+            .long("toml-config")
+            .takes_value(true))
         .arg(Arg::new("stream")
             .help("Enable streaming the results into stdout as they come in. Only works if piping the results out or if quiet mode is enabled.")
             .long("stream")
