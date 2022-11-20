@@ -46,7 +46,7 @@ fn get_listening_port(parsed: &TomlInput, args: &mut Vec<String>) {
 fn get_ports(parsed: &TomlInput, args: &mut Vec<String>) {
     parsed.ports.as_ref().map(|ports| {
         args.push("--ports".to_string());
-        let ports_string = ports.iter().map(|x| x.as_str().expect("invalid type for ports").to_string() + ",").collect::<String>();
+        let ports_string = ports.iter().map(|x| x.to_string() + ",").collect::<String>();
         args.push(ports_string[0..ports_string.len() - 1].to_string()) // remove trailing comma
     });
     parsed.top100.as_ref().map(|_| args.push("--top100".to_string()));
