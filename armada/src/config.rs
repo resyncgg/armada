@@ -30,6 +30,7 @@ pub fn get_toml_config(path: String) -> Vec<String> {
     get_rate_limit(&parsed, &mut args);
     get_retries(&parsed, &mut args);
     get_stream(&parsed, &mut args);
+    get_source_ip(&parsed, &mut args);
     get_targets(&parsed, &mut args);
     get_timeout(&parsed, &mut args);
 
@@ -54,7 +55,11 @@ fn get_ports(parsed: &TomlInput, args: &mut Vec<String>) {
 }
 
 fn get_quiet(parsed: &TomlInput, args: &mut Vec<String>) {
-    parsed.quiet.as_ref().map(|_| args.push("--quiet".to_string()));
+    parsed.quiet.as_ref().map(|x| {
+        if x.as_bool().expect("option \"quiet\" must be a boolean") {
+            args.push("--quiet".to_string())
+        }
+    });
 }
 
 fn get_rate_limit(parsed: &TomlInput, args: &mut Vec<String>) {
@@ -72,10 +77,22 @@ fn get_retries(parsed: &TomlInput, args: &mut Vec<String>) {
 }
 
 fn get_stream(parsed: &TomlInput, args: &mut Vec<String>) {
-    parsed.stream.as_ref().map(|_| args.push("--stream".to_string()));
+    parsed.stream.as_ref().map(|x| {
+        if x.as_bool().expect("option \"stream\" must be a boolean") {
+            args.push("--stream".to_string())
+        }
+    });
+}
+
+fn get_source_ip(parsed: &TomlInput, args: &mut Vec<String>) {
     parsed.source_ip.as_ref().map(|source_ip| {
         args.push("--source-ip".to_string());
-        args.push(source_ip.to_string())
+        args.push(
+            source_ip
+                .as_str()
+                .expect("option \"source-ip\" must be a string")
+                .to_string(),
+        )
     });
 }
 
