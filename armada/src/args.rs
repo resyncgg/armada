@@ -274,7 +274,7 @@ fn app_config() -> Command<'static> {
             .long("top1000")
             .takes_value(false))
         .arg(Arg::new("toml_config")
-            .help("Read configuration from TOML file instead of command line args.")
+            .help("Reads configuration from TOML file instead of command line args.")
             .long("toml-config")
             .takes_value(true))
         .arg(Arg::new("stream")
