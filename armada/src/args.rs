@@ -26,7 +26,8 @@ pub(crate) struct ArmadaCLIConfig {
     pub(crate) retries: u8,
     pub(crate) timeout: Duration,
     pub(crate) source_ips: Option<Vec<IpAddr>>,
-    pub(crate) stream_results: bool
+    pub(crate) stream_results: bool,
+    pub(crate) generate_report: bool
 }
 
 pub(crate) fn get_armada_cli_config() -> ArmadaCLIConfig {
@@ -41,6 +42,7 @@ pub(crate) fn get_armada_cli_config() -> ArmadaCLIConfig {
     let timeout = get_timeout(&matches);
     let source_ips = get_source_ip_addresses(&matches);
     let stream_results = get_stream_results(&matches);
+    let generate_report = get_report_status(&matches);
 
     if stream_results {
         if !quiet_mode && atty::is(Stream::Stdout) {
@@ -57,7 +59,8 @@ pub(crate) fn get_armada_cli_config() -> ArmadaCLIConfig {
         retries,
         timeout,
         source_ips,
-        stream_results
+        stream_results,
+        generate_report
     }
 }
 
@@ -211,6 +214,10 @@ fn get_stream_results(matches: &ArgMatches) -> bool {
     matches.is_present("stream")
 }
 
+fn get_report_status(matches: &ArgMatches) -> bool {
+    matches.is_present("report")
+}
+
 fn app_config() -> Command<'static> {
     Command::new("armada")
         .author("d0nut <d0nut@resync.gg>")
@@ -285,5 +292,9 @@ fn app_config() -> Command<'static> {
         .arg(Arg::new("sanic")
             .hide(true)
             .long("sanic")
+            .takes_value(false))
+        .arg(Arg::new("report")
+            .help("Saves output to the specificed format. Supported options: CSV")
+            .short('r')
             .takes_value(false))
 }

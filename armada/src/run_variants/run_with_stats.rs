@@ -33,7 +33,8 @@ impl ProgressArmada for Armada {
         retries: u8,
         timeout: Duration,
         rate_limit: Option<usize>,
-        stream_output: bool
+        stream_output: bool,
+        generate_report: bool
     ) -> Vec<SocketAddr> {
         let mut total_open_ports = Vec::new();
         let total_ports: u128 = targets.size() * ports.size() as u128;

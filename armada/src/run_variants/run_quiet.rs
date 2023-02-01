@@ -21,7 +21,8 @@ impl QuietArmada for Armada {
         retries: u8,
         timeout: Duration,
         rate_limit: Option<usize>,
-        stream_results: bool
+        stream_results: bool,
+        generate_report: bool
     ) -> Vec<SocketAddr> {
         if stream_results {
             let mut reporting_handle = self.scan_with_handle(

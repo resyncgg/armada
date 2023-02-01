@@ -24,3 +24,4 @@ indicatif = "0"
 rand = "0"
 regex = "1"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"]}
+csv = "1.1"
