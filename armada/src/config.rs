@@ -17,13 +17,13 @@ pub fn get_toml_config(toml_path: String) -> Vec<String> {
 fn get_flag(key: &String, val: &Value) -> Vec<String> {
     let flag = format!("--{}", &key);
     let mut arg = vec![flag];
-    match val {
-        Value::Boolean(_) => {}
-        Value::Integer(toml_int) => arg.push(toml_int.to_string()),
-        Value::String(toml_string) => arg.push(toml_string.to_owned()),
-        Value::Array(arr) => arg.push(unpack_array_args(arr)),
+    arg.push(match val {
+        Value::Boolean(toml_bool) => if *toml_bool {return arg} else {return vec![]},
+        Value::Integer(toml_int) => toml_int.to_string(),
+        Value::String(toml_string) => toml_string.to_owned(),
+        Value::Array(arr) => unpack_array_args(arr),
         _ => panic!("Found invalid type in TOML file, values must be one of Bool, String, Integer, or Array"),
-    }
+    });
     arg
 }
 
