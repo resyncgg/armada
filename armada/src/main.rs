@@ -1,6 +1,7 @@
 mod args;
 mod ranges;
 mod run_variants;
+mod config;
 
 use std::net::{
     IpAddr,
@@ -10,11 +11,11 @@ use std::net::{
 
 use armada_lib::Armada;
 
-use crate::args::ArmadaCLIConfig;
+use crate::args::ArmadaConfig;
 
 #[tokio::main]
 async fn main() {
-    let ArmadaCLIConfig {
+    let ArmadaConfig {
         targets,
         ports,
         quiet_mode,
@@ -24,7 +25,7 @@ async fn main() {
         timeout,
         source_ips,
         stream_results
-    } = args::get_armada_cli_config();
+    } = args::get_armada_config();
 
     let armada = Armada::new(listening_port);
 
