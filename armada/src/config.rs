@@ -19,21 +19,25 @@ fn get_flag(key: &String, val: &Value) -> Vec<String> {
     let mut arg = vec![flag];
     match val {
         Value::Boolean(_) => {}
-        Value::String(val) => arg.push(val.to_string()),
-        Value::Array(vals) => {
-            let mut arg_str = "".to_string();
-            for (i, v) in vals.iter().enumerate() {
-                arg_str.push_str(
-                    v.as_str()
-                        .expect("Incorrect type found in TOML, array values must be Strings"),
-                );
-                if i != vals.len() - 1 {
-                    arg_str.push_str(",")
-                }
-            }
-            arg.push(arg_str);
+        Value::Integer(toml_int) => arg.push(toml_int.to_string()),
+        Value::String(toml_string) => arg.push(toml_string.to_owned()),
+        Value::Array(arr) => arg.push(unpack_array_args(arr)),
+        _ => panic!("Found invalid type in TOML file, values must be one of Bool, String, Integer, or Array"),
+    }
+    arg
+}
+
+fn unpack_array_args(arr: &Vec<Value>) -> String {
+    let mut arg = "".to_string();
+    for (i, v) in arr.iter().enumerate() {
+        arg.push_str(&match v {
+            Value::Integer(toml_int) => toml_int.to_string(),
+            Value::String(toml_string) => toml_string.to_owned(),
+            _ => panic!("Incorrect type found in TOML, array values must be Strings or Integers"),
+        });
+        if i != arr.len() - 1 {
+            arg.push_str(",")
         }
-        _ => panic!("Incorrect type found in TOML file, values must be one of Bool, String, or String-Array",),
     }
     arg
 }
