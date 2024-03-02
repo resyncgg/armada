@@ -17,7 +17,7 @@ debug = false
 atty = "0"
 async-trait = "0"
 armada_lib = { version = "1", path = "../armada_lib" }
-cidr-utils = "0"
+cidr-utils = "0.5.1"
 clap = { version = "3", features = ["cargo"] }
 console = "0"
 indicatif = "0"
