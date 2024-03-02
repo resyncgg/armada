@@ -153,6 +153,7 @@ fn get_rate_limit(matches: &ArgMatches) -> Option<usize> {
     match rate_limit {
         _ if matches.is_present("sanic") => None,
         Some(rate) if rate == 0 => None,
+        Some(rate) if rate < 10 => Some(10),
         Some(rate) => Some(rate),
         None => Some(DEFAULT_RATE_LIMIT),
     }
