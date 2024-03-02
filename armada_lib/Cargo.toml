@@ -1,11 +1,11 @@
 [package]
 name = "armada_lib"
-version = "1.0.4"
+version = "1.0.5"
 authors = ["d0nut <d0nut@resync.gg>"]
 description = "A high performance TCP SYN port scanner library."
 license = "CC-BY-NC-SA-4.0"
 repository = "https://github.com/resyncgg/armada"
-edition = "2018"
+edition = "2021"
 
 [lib]
 name = "armada_lib"
@@ -29,3 +29,4 @@ tokio-stream = "0.1"
 tracing = "0.1"
 twox-hash = "1.6"
 rand = "0.8"
+anyhow = "1"

@@ -17,7 +17,9 @@ use crate::armada::worker::ArmadaWorker;
 use futures::stream::StreamExt;
 use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr};
 use std::time::Duration;
+use anyhow::Context;
 use tokio_stream::wrappers::UnboundedReceiverStream;
+use tracing::error;
 
 /// High performance port scanner
 #[derive(Clone)]
@@ -36,7 +38,9 @@ impl Armada {
         std::thread::Builder::new()
             .name("armada_worker".to_string())
             .spawn(move || {
-                armada_worker.run(listening_port);
+                if let Err(e) = armada_worker.run(listening_port) {
+                    error!(err = ?e);
+                }
             }).expect("Failed to create armada worker thread.");
 
         Self { work_sender }
@@ -52,7 +56,7 @@ impl Armada {
         port_retries: u8,
         port_timeout: Duration,
         packets_per_second: Option<usize>,
-    ) -> Vec<SocketAddr> {
+    ) -> anyhow::Result<Vec<SocketAddr>> {
         let armada_work_results_handle = self.scan_with_handle(
             remote_hosts,
             ports,
@@ -61,10 +65,10 @@ impl Armada {
             port_retries,
             port_timeout,
             packets_per_second
-        );
+        )?;
 
         // receive all of the reports, filter out non-result messages, and flatten the result list
-        UnboundedReceiverStream::new(armada_work_results_handle)
+        let results = UnboundedReceiverStream::new(armada_work_results_handle)
             .filter_map(|report| async move {
                 if let ArmadaWorkMessage::Results(results) = report {
                     Some(futures::stream::iter(results))
@@ -74,7 +78,9 @@ impl Armada {
             })
             .flatten()
             .collect()
-            .await
+            .await;
+
+        Ok(results)
     }
 
     /// Initiates a port scan and returns a stream handle that can be used to receive both results and statistics of the scan process.
@@ -87,7 +93,7 @@ impl Armada {
         port_retries: u8,
         port_timeout: Duration,
         packets_per_second: Option<usize>,
-    ) -> UnboundedReceiver<ArmadaWorkMessage> {
+    ) -> anyhow::Result<UnboundedReceiver<ArmadaWorkMessage>> {
         let (reporting_channel, report_receiver) = unbounded_channel();
 
         let work = ArmadaWork::new(
@@ -101,8 +107,10 @@ impl Armada {
             reporting_channel,
         );
 
-        self.work_sender.send(work).expect("Failed to send armada work over work sender channel.");
+        let _ = self.work_sender
+            .send(work)
+            .context("Failed to send armada work over work sender channel.")?;
 
-        report_receiver
+        Ok(report_receiver)
     }
 }

@@ -32,7 +32,7 @@ impl QuietArmada for Armada {
                 retries,
                 timeout,
                 rate_limit,
-            );
+            ).unwrap();
 
             while let Some(message) = reporting_handle.recv().await {
                 match message {
@@ -57,6 +57,7 @@ impl QuietArmada for Armada {
                 rate_limit,
             )
                 .await
+                .unwrap()
         }
     }
 }

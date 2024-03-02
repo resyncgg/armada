@@ -9,6 +9,7 @@ use std::collections::{HashMap, HashSet};
 use std::hash::BuildHasherDefault;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
 use std::time::{Duration, Instant};
+use anyhow::Context;
 use tokio::sync::mpsc::UnboundedReceiver;
 use tracing::{error, warn};
 use twox_hash::XxHash64;
@@ -29,7 +30,7 @@ impl ArmadaWorker {
     }
 
     /// Runs the Armada worker, only processing (and sending) packets with the specified port
-    pub(crate) fn run(mut self, port: u16) {
+    pub(crate) fn run(mut self, port: u16) -> anyhow::Result<()> {
         // todo: increase buffer size
         let ipv4_protocol =
             TransportChannelType::Layer4(TransportProtocol::Ipv4(IpNextHeaderProtocols::Tcp));
@@ -38,16 +39,16 @@ impl ArmadaWorker {
 
         let (mut ipv4_tcp_sender, mut ipv4_tcp_receiver) =
             transport_channel(1024 * 16, ipv4_protocol)
-                .expect("Error on raw socket initialization");
+                .context("Error on raw socket initialization")?;
 
         let (mut ipv6_tcp_sender, mut ipv6_tcp_receiver) =
             transport_channel(1024 * 16, ipv6_protocol)
-                .expect("Error on raw socket initialization");
+                .context("Error on raw socket initialization")?;
 
         let mut tcp_seq = rand::random::<u32>();
 
         while let Some(work) = self.work_queue.blocking_recv() {
-            self.process_work(
+            if let Err(e) = self.process_work(
                 work,
                 &mut ipv4_tcp_sender,
                 &mut ipv4_tcp_receiver,
@@ -55,8 +56,12 @@ impl ArmadaWorker {
                 &mut ipv6_tcp_receiver,
                 port,
                 &mut tcp_seq,
-            );
+            ) {
+                error!(err = ?e, "scan failed");
+            }
         }
+
+        Ok(())
     }
 
     fn process_work(
@@ -68,7 +73,7 @@ impl ArmadaWorker {
         ipv6_tcp_receiver: &mut TransportReceiver,
         listening_port: u16,
         tcp_seq: &mut u32,
-    ) {
+    ) -> anyhow::Result<()> {
         let ArmadaWork {
             mut remote_addrs,
             port_retries,
@@ -151,13 +156,11 @@ impl ArmadaWorker {
                         .unwrap();
 
                     // might as well send a stats update
-                    reporting_channel
-                        .send(ArmadaWorkMessage::stats(
-                            total_processed_ports,
-                            inflight_addrs.len() as u128,
-                            total_packets_sent
-                        ))
-                        .expect("Failed to send stats update over reporting channel.");
+                    reporting_channel.send(ArmadaWorkMessage::stats(
+                        total_processed_ports,
+                        inflight_addrs.len() as u128,
+                        total_packets_sent
+                    )).context("Failed to send a stats update")?;
                 }
 
                 // if the number of packets we've sent so far is below the packet limit for our resolution, mark as "clear to send" otherwise don't
@@ -177,7 +180,7 @@ impl ArmadaWorker {
                             inflight_addrs.len() as u128,
                             total_packets_sent
                         ))
-                        .expect("Failed to send stats update over reporting channel.");
+                        .context("Failed to send stats update over reporting channel.")?;
                 }
             }
 
@@ -233,11 +236,11 @@ impl ArmadaWorker {
                     total_processed_ports,
                     inflight_addrs.len() as u128,
                     total_packets_sent
-                )).expect("Failed to send stats message to reporting channel.");
+                )).context("Failed to send stats message to reporting channel.")?;
                 // we'll empty the open ports vec into our update here
                 reporting_channel.send(
                     ArmadaWorkMessage::results(open_ports.drain(.. open_ports.len()).collect())
-                ).expect("Failed to send results message to reporting channel.");
+                ).context("Failed to send results message to reporting channel.")?;
             }
 
             self.process_expiration(&mut expiry_list)
@@ -266,11 +269,13 @@ impl ArmadaWorker {
         // send the final stats and results before closing up shop
         reporting_channel
             .send(ArmadaWorkMessage::stats(total_processed_ports, inflight_addrs.len() as u128, total_packets_sent))
-            .expect("Failed to send final stats message over reporting channel.");
+            .context("Failed to send final stats message over reporting channel.")?;
 
         reporting_channel
             .send(ArmadaWorkMessage::results(open_ports))
-            .expect("Failed to send final results message over reporting channel.");
+            .context("Failed to send final results message over reporting channel.")?;
+
+        Ok(())
     }
 
     /// Pulls socket addresses off the queued address list and sends them SYN TCP packets via IPv4 or IPv6
@@ -362,15 +367,38 @@ impl ArmadaWorker {
         tcp_receiver: &mut TransportReceiver,
         listening_port: u16,
     ) -> Vec<SocketAddr> {
-        use pnet::packet::tcp::TcpFlags::{ACK, RST};
+        use pnet::packet::tcp::TcpFlags::{NS, CWR, ECE, URG, ACK, RST, SYN, PSH, FIN};
 
         let mut results = Vec::with_capacity(BATCH_RECV_SIZE);
 
         while let Ok(Some((packet, remote))) = tcp_receiver.try_next() {
             let flag = packet.get_flags();
 
-            let rst_flag = flag & RST != 0;
+            let seq = packet.get_sequence();
+            let ns_flag = flag & NS != 0;
+            let cwr_flag = flag & CWR != 0;
+            let ece_flag = flag & ECE != 0;
+            let urg_flag = flag & URG != 0;
             let ack_flag = flag & ACK != 0;
+            let psh_flag = flag & PSH != 0;
+            let rst_flag = flag & RST != 0;
+            let syn_flag = flag & SYN != 0;
+            let fin_flag = flag & FIN != 0;
+
+            if remote == IpAddr::from([103,97,3,19]) {
+                println!("{:#?}:", packet.get_source());
+                println!("\tRemote: {remote:#?}");
+                println!("\tSEQ: {seq}");
+                println!("\tNS: {ns_flag}");
+                println!("\tCWR: {cwr_flag}");
+                println!("\tECE: {ece_flag}");
+                println!("\tURG: {urg_flag}");
+                println!("\tACK: {ack_flag}");
+                println!("\tPSH: {psh_flag}");
+                println!("\tRST: {rst_flag}");
+                println!("\tSYN: {syn_flag}");
+                println!("\tFIN: {fin_flag}");
+            }
 
             // todo: if reset packet back, return "definitely closed"
 
